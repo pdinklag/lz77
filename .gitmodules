@@ -1,0 +1,3 @@
+[submodule "extlib/libsais"]
+	path = extlib/libsais
+	url = https://github.com/IlyaGrebnov/libsais.git
