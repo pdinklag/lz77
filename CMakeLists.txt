@@ -12,7 +12,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmakemodules")
 include(InitGitSubmodules)
 
 # create library
-set(EXTLIB_SOURCE_DIR ${CMAKE_SOURCE_DIR}/extlib)
+set(EXTLIB_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/extlib)
 set(LIBSAIS_SOURCE_DIR ${EXTLIB_SOURCE_DIR}/libsais)
 
 add_library(lz77
