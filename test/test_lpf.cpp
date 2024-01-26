@@ -29,6 +29,7 @@
 #include "doctest.h"
 
 #include <lz77/lpf_factorizer.hpp>
+#include "decode.hpp"
 
 namespace lz77::test {
 
@@ -60,6 +61,9 @@ TEST_SUITE("lpf_factorizer") {
         CHECK(factors[14] == Factor('c'));
         CHECK(factors[15] == Factor(9, 3));
         CHECK(factors[16] == Factor(15, 2));
+
+        auto const dec = decode(factors.begin(), factors.end());
+        CHECK(dec == text);
     }
 }
 

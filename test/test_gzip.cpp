@@ -29,6 +29,7 @@
 #include "doctest.h"
 
 #include <lz77/gzip9_factorizer.hpp>
+#include "decode.hpp"
 
 namespace lz77::test {
 
@@ -65,16 +66,8 @@ TEST_SUITE("gzip_factorizer") {
         CHECK(factors[19] == Factor('a'));
         CHECK(factors[20] == Factor(21, 4));
 
-        /*
-        auto data = gzip9.gather_data();
-        CHECK(data["data"]["chain_length_max"] == 4);
-        CHECK(data["data"]["chain_length_sum"] == 14);
-        CHECK(data["data"]["chain_num"] == 8);
-        CHECK(data["data"]["nice_num"] == 0);
-        CHECK(data["data"]["good_num"] == 0);
-        CHECK(data["data"]["greedy_skips"] == 2);
-        CHECK(data["data"]["match_ops"] == 14);
-        */
+        auto const dec = decode(factors.begin(), factors.end());
+        CHECK(dec == text);
     }
 }
 
