@@ -56,6 +56,15 @@ class LPFFactorizer {
 private:
     static constexpr size_t MAX_SIZE_32BIT = 1ULL << 31;
 
+    static size_t lce(std::string_view const& t, size_t const i, size_t const j) {
+        auto const n = t.length();
+
+        size_t l = 0;
+        while(i + l < n && j + l < n && t[i + l] == t[j + l]) ++l;
+
+        return l;
+    }
+
     size_t min_ref_len_;
 
     template<bool require_64bit, std::output_iterator<Factor> Output>
@@ -65,17 +74,12 @@ private:
         // construct suffix array, inverse suffix array and lcp array
         Index const n = t.size();
         auto sa = std::make_unique<Index[]>(n);
-        auto lcp = std::make_unique<Index[]>(n);
         auto isa = std::make_unique<Index[]>(n);
 
         if constexpr(require_64bit) {
             libsais64((uint8_t const*)t.data(), (int64_t*)sa.get(), n, 0, nullptr);
-            libsais64_plcp((uint8_t const*)t.data(), (int64_t const*)sa.get(), (int64_t*)isa.get(), n);
-            libsais64_lcp((int64_t const*)isa.get(), (int64_t const*)sa.get(), (int64_t*)lcp.get(), n);
         } else {
             libsais((uint8_t const*)t.data(), (int32_t*)sa.get(), n, 0, nullptr);
-            libsais_plcp((uint8_t const*)t.data(), (int32_t const*)sa.get(), (int32_t*)isa.get(), n);
-            libsais_lcp((int32_t const*)isa.get(), (int32_t const*)sa.get(), (int32_t*)lcp.get(), n);
         }
         for(Index i = 0; i < n; i++) isa[sa[i]] = i;
 
@@ -84,35 +88,14 @@ private:
             // get SA position for suffix i
             size_t const cur_pos = isa[i];
 
-            // compute naively PSV
-            // search "upwards" in LCP array
-            // include current, exclude last
-            size_t psv_lcp = lcp[cur_pos];
+            // compute PSV and NSV
             ssize_t psv_pos = (ssize_t)cur_pos - 1;
-            if (psv_lcp > 0) {
-                while (psv_pos >= 0 && sa[psv_pos] > sa[cur_pos]) {
-                    psv_lcp = std::min<size_t>(psv_lcp, lcp[psv_pos--]);
-                }
-            }
+            while (psv_pos >= 0 && sa[psv_pos] > i) --psv_pos;
+            size_t const psv_lcp = psv_pos >= 0 ? lce(t, i, (size_t)sa[psv_pos]) : 0;
 
-            // compute naively NSV
-            // search "downwards" in LCP array
-            // exclude current, include last
-            size_t nsv_lcp = 0;
             size_t nsv_pos = cur_pos + 1;
-            if (nsv_pos < n) {
-                nsv_lcp = SIZE_MAX;
-                do {
-                    nsv_lcp = std::min<size_t>(nsv_lcp, lcp[nsv_pos]);
-                    if (sa[nsv_pos] < sa[cur_pos]) {
-                        break;
-                    }
-                } while (++nsv_pos < n);
-
-                if (nsv_pos >= n) {
-                    nsv_lcp = 0;
-                }
-            }
+            while(nsv_pos < n && sa[nsv_pos] > i) ++nsv_pos;
+            size_t const nsv_lcp = nsv_pos < n ? lce(t, i, (size_t)sa[nsv_pos]) : 0;
 
             //select maximum
             size_t const max_lcp = std::max(psv_lcp, nsv_lcp);
