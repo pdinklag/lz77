@@ -21,13 +21,6 @@ add_library(lz77
 )
 target_include_directories(lz77 PUBLIC ${LIBSAIS_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# potentially enable OpenMP in libsais
-find_package(OpenMP)
-if(OpenMP_FOUND)
-    target_compile_definitions(lz77 PUBLIC LIBSAIS_OPENMP)
-    target_link_libraries(lz77 PUBLIC OpenMP::OpenMP_C)
-endif()
-
 # provide tests and benchmark if standalone
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     enable_testing()
