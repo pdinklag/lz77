@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <cassert>
 #include <concepts>
+#include <cstring>
 #include <iterator>
 
 #include "factor.hpp"
