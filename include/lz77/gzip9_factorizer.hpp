@@ -34,7 +34,7 @@
 #include <cstring>
 #include <iterator>
 
-#include "factor.hpp"
+#include "emit_function.hpp"
 
 namespace lz77 {
 
@@ -121,8 +121,7 @@ private:
         return num;
     }
 
-    template<typename FactorOutput>
-    void process(FactorOutput& out) {
+    void process(EmitFunction& emit_literal, EmitFunction& emit_reference) {
         const size_t relative_pos = pos_ - buf_offs_;
 
         // insert current string
@@ -234,7 +233,7 @@ private:
             // compare current match against previous match
             if(prev_length_ >= min_match_ && match_length_ <= prev_length_) {
                 // previous match was better than current, emit
-                *out++ = Factor(pos_ - 1 - prev_src_, prev_length_);
+                emit_reference(Factor(pos_ - 1 - prev_src_, prev_length_));
                 hash_only_ = prev_length_ - 2; // current and previous positions are already hashed
 
                 // reset
@@ -248,7 +247,7 @@ private:
                     if(prev_length_ >= min_match_) ++stats_.greedy_skips;
                 }
 
-                *out++ = Factor((char)buf_[buf_pos_ - 1]);
+                emit_literal(Factor((char)buf_[buf_pos_ - 1]));
             } else {
                 // there is no previous match to compare with, wait for next step
                 prev_match_exists_ = true;
@@ -276,9 +275,9 @@ public:
         delete[] hashtable_;
     }
 
-    template<std::input_iterator Input, std::output_iterator<Factor> Output>
+    template<std::input_iterator Input>
     requires (sizeof(std::iter_value_t<Input>) == 1)
-    void factorize(Input begin, Input const& end, Output out) {
+    void factorize(Input begin, Input const& end, EmitFunction emit_literal, EmitFunction emit_reference) {
         if constexpr(track_stats_) {
             stats_.chain_length_max = 0;
             stats_.chain_length_sum = 0;
@@ -349,7 +348,7 @@ public:
 
         // process final window
         while(buf_pos_ + min_match_ <= buf_avail_) {
-            process(out);
+            process(emit_literal, emit_reference);
             
             ++pos_;
             ++buf_pos_;
@@ -360,12 +359,19 @@ public:
             if(hash_only_) {
                 --hash_only_;
             } else {
-                *out++ = Factor((char)buf_[buf_pos_]);
+                emit_literal(Factor((char)buf_[buf_pos_]));
             }
 
             ++buf_pos_;
             ++pos_;
         }
+    }
+
+    template<std::contiguous_iterator Input, std::output_iterator<Factor> Output>
+    requires (sizeof(std::iter_value_t<Input>) == 1)
+    void factorize(Input begin, Input const& end, Output out) {
+        auto emit = [&](Factor f){ *out++ = f; };
+        factorize(begin, end, emit, emit);
     }
 };
 

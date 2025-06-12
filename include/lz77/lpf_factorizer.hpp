@@ -39,7 +39,7 @@
 #include <libsais.h>
 #include <libsais64.h>
 
-#include "factor.hpp"
+#include "emit_function.hpp"
 
 namespace lz77 {
 
@@ -67,8 +67,8 @@ private:
 
     size_t min_ref_len_;
 
-    template<bool require_64bit, std::output_iterator<Factor> Output>
-    void factorize(std::string_view const& t, Output& out) {
+    template<bool require_64bit>
+    void factorize(std::string_view const& t, EmitFunction emit_literal, EmitFunction emit_reference) {
         using Index = std::conditional_t<require_64bit, uint64_t, uint32_t>;
 
         // construct suffix array, inverse suffix array and lcp array
@@ -106,11 +106,11 @@ private:
                 assert(sa[max_pos] < i);
                 
                 // emit reference
-                *out++ = Factor(i - sa[max_pos], max_lcp);
+                emit_reference(Factor(i - sa[max_pos], max_lcp));
                 i += max_lcp; //advance
             } else {
                 // emit literal
-                *out++ = Factor(t[i]);
+                emit_literal(Factor(t[i]));
                 ++i; //advance
             }
         }
@@ -120,17 +120,24 @@ public:
     LPFFactorizer() : min_ref_len_(2) {
     }
 
-    template<std::contiguous_iterator Input, std::output_iterator<Factor> Output>
+    template<std::contiguous_iterator Input>
     requires (sizeof(std::iter_value_t<Input>) == 1)
-    void factorize(Input begin, Input const& end, Output out) {
+    void factorize(Input begin, Input const& end, EmitFunction emit_literal, EmitFunction emit_reference) {
         std::string_view const t(begin, end);
         size_t const n = t.size();
 
         if(n < MAX_SIZE_32BIT) {
-            factorize<false>(t, out);
+            factorize<false>(t, emit_literal, emit_reference);
         } else {
-            factorize<true>(t, out);
+            factorize<true>(t, emit_literal, emit_reference);
         }
+    }
+
+    template<std::contiguous_iterator Input, std::output_iterator<Factor> Output>
+    requires (sizeof(std::iter_value_t<Input>) == 1)
+    void factorize(Input begin, Input const& end, Output out) {
+        auto emit = [&](Factor f){ *out++ = f; };
+        factorize(begin, end, emit, emit);
     }
 
     /**
