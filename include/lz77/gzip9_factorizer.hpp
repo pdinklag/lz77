@@ -312,7 +312,7 @@ public:
             {
                 const size_t buf_border = buf_avail_ - min_lookahead_;
                 while(buf_pos_ < buf_border) {
-                    process(out);
+                    process(emit_literal, emit_reference);
                     
                     ++buf_pos_;
                     ++pos_;
