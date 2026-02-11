@@ -7,19 +7,14 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -std=gnu++20 ${GCC_WARNINGS}")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -ggdb")
 
-# initialize git submodules
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmakemodules")
-include(InitGitSubmodules)
+# dependencies
+include(cmake/CPM.cmake)
+CPMAddPackage("gh:IlyaGrebnov/libsais#v2.10.4")
 
-# create library
-set(EXTLIB_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/extlib)
-set(LIBSAIS_SOURCE_DIR ${EXTLIB_SOURCE_DIR}/libsais)
-
-add_library(lz77
-    ${LIBSAIS_SOURCE_DIR}/src/libsais.c
-    ${LIBSAIS_SOURCE_DIR}/src/libsais64.c
-)
-target_include_directories(lz77 PUBLIC ${LIBSAIS_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/include)
+# LZ77
+add_library(lz77 INTERFACE)
+target_include_directories(lz77 INTERFACE ${libsais_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(lz77 INTERFACE libsais)
 
 # provide tests and benchmark if standalone
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
