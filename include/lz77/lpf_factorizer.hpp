@@ -39,6 +39,10 @@
 #include <libsais.h>
 #include <libsais64.h>
 
+#ifdef LIBSAIS_OPENMP
+#include <omp.h>
+#endif
+
 #include "emit_function.hpp"
 
 namespace lz77 {
@@ -77,11 +81,25 @@ private:
         auto isa = std::make_unique<Index[]>(n);
 
         if constexpr(require_64bit) {
+            #ifdef LIBSAIS_OPENMP
+            libsais64_omp((uint8_t const*)t.data(), (int64_t*)sa.get(), n, 0, nullptr, omp_get_max_threads());
+            #else
             libsais64((uint8_t const*)t.data(), (int64_t*)sa.get(), n, 0, nullptr);
+            #endif
         } else {
+            #ifdef LIBSAIS_OPENMP
+            libsais_omp((uint8_t const*)t.data(), (int32_t*)sa.get(), n, 0, nullptr, omp_get_max_threads());
+            #else
             libsais((uint8_t const*)t.data(), (int32_t*)sa.get(), n, 0, nullptr);
+            #endif
         }
+
+        #ifdef LIBSAIS_OPENMP
+        #pragma omp parallel for
         for(Index i = 0; i < n; i++) isa[sa[i]] = i;
+        #else
+        for(Index i = 0; i < n; i++) isa[sa[i]] = i;
+        #endif
 
         // factorize
         for(size_t i = 0; i < n;) {
