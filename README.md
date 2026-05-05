@@ -2,7 +2,8 @@
 
 This C++20 library provides factorizers for Lempel-Ziv 77-like text factorizations, including:
 
-* Exact computation of LZ77 by simulating the longest previous factor (LPF) array using an enhanced suffix array
+* The popular KKP2 algorithm due to Kärkkäinen, Kempa and Puglisi [CPM 2013].
+* Exact computation of LZ77 by simulating the longest previous factor (LPF) array using an enhanced suffix array.
 * Re-implementation of `gzip -9`, producing the exact factorization that the infamous gzip does with flag `-9`, however without any subsequent encoding.
 
 The library is meant to aid research on the text of data compression and likely not useful in any production scenario.
@@ -73,15 +74,15 @@ The helper functions `is_literal()` and `is_reference()` allow you to distinguis
 
 ### Factorization
 
-The factorizers take an input and an end iterator to some sort of string data and compute the corresponding factorization. The following example computes an exact LZ77 factorization of a string using the `lz77::LPFFactorizer` and stores the factors in a vector:
+The factorizers take an input and an end iterator to some sort of string data and compute the corresponding factorization. The following example computes an exact LZ77 factorization of a string using the `lz77::KKP2Factorizer` and stores the factors in a vector:
 
 ```cpp
-#include <lz77/lpf_factorizer.hpp>
+#include <lz77/kkp2_factorizer.hpp>
 
 // ...
 
 std::vector<lz77::Factor> factors;
-lz77::LPFFactorizer lpf;
+lz77::KKP2Factorizer lpf;
 lpf.factorize(str.begin(), str.end(), std::back_inserter(factors));
 ```
 
