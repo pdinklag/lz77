@@ -84,58 +84,59 @@ private:
         using Index = std::conditional_t<require_64bit, uint64_t, uint32_t>;
         using SignedIndex = std::make_signed_t<Index>;
 
-        // construct suffix array, inverse suffix array and lcp array
+        // construct index data structures
         Index const n = t.size();
-        auto sa = std::make_unique<Index[]>(n);
         auto cs = std::make_unique<SignedIndex[]>(n+5);
-
-        if constexpr(require_64bit) {
-            #ifdef LIBSAIS_OPENMP
-            libsais64_omp((uint8_t const*)t.data(), (int64_t*)sa.get(), n, 0, nullptr, omp_get_max_threads());
-            #else
-            libsais64((uint8_t const*)t.data(), (int64_t*)sa.get(), n, 0, nullptr);
-            #endif
-        } else {
-            #ifdef LIBSAIS_OPENMP
-            libsais_omp((uint8_t const*)t.data(), (int32_t*)sa.get(), n, 0, nullptr, omp_get_max_threads());
-            #else
-            libsais((uint8_t const*)t.data(), (int32_t*)sa.get(), n, 0, nullptr);
-            #endif
-        }
-
-        // construct
-        auto stack = std::make_unique<SignedIndex[]>(STACK_SIZE + 5);
-        SignedIndex top = 0;
-        stack[top] = 0;
-
-        cs[0] = -1;
-        for(size_t i = 1; i <= n; i++) {
-            auto const sai = sa[i-1] + 1;
-            while(stack[top] > sai) --top;
-
-            if((top & STACK_MASK) == 0) {
-                if (stack[top] < 0) {
-                    // Stack empty -- use implicit.
-                    top = -stack[top];
-                    while (top > sai) top = cs[top];
-                    stack[0] = -cs[top];
-                    stack[1] = top;
-                    top = 1;
-                } else if (top == STACK_SIZE) {
-                    // Stack is full -- discard half.
-                    for (size_t j = STACK_HALF; j <= STACK_SIZE; j++) {
-                        stack[j - STACK_HALF] = stack[j];
-                    }
-                    stack[0] = -stack[0];
-                    top = STACK_HALF;
-                }
+        {
+            auto sa = std::make_unique<Index[]>(n);
+            
+            if constexpr(require_64bit) {
+                #ifdef LIBSAIS_OPENMP
+                libsais64_omp((uint8_t const*)t.data(), (int64_t*)sa.get(), n, 0, nullptr, omp_get_max_threads());
+                #else
+                libsais64((uint8_t const*)t.data(), (int64_t*)sa.get(), n, 0, nullptr);
+                #endif
+            } else {
+                #ifdef LIBSAIS_OPENMP
+                libsais_omp((uint8_t const*)t.data(), (int32_t*)sa.get(), n, 0, nullptr, omp_get_max_threads());
+                #else
+                libsais((uint8_t const*)t.data(), (int32_t*)sa.get(), n, 0, nullptr);
+                #endif
             }
 
-            cs[sai] = std::max(SignedIndex(0), stack[top]);
-            ++top;
-            stack[top] = sai;
+            // construct
+            auto stack = std::make_unique<SignedIndex[]>(STACK_SIZE + 5);
+            SignedIndex top = 0;
+            stack[top] = 0;
+
+            cs[0] = -1;
+            for(size_t i = 1; i <= n; i++) {
+                auto const sai = sa[i-1] + 1;
+                while(stack[top] > sai) --top;
+
+                if((top & STACK_MASK) == 0) {
+                    if (stack[top] < 0) {
+                        // Stack empty -- use implicit.
+                        top = -stack[top];
+                        while (top > sai) top = cs[top];
+                        stack[0] = -cs[top];
+                        stack[1] = top;
+                        top = 1;
+                    } else if (top == STACK_SIZE) {
+                        // Stack is full -- discard half.
+                        for (size_t j = STACK_HALF; j <= STACK_SIZE; j++) {
+                            stack[j - STACK_HALF] = stack[j];
+                        }
+                        stack[0] = -stack[0];
+                        top = STACK_HALF;
+                    }
+                }
+
+                cs[sai] = std::max(SignedIndex(0), stack[top]);
+                ++top;
+                stack[top] = sai;
+            }
         }
-        stack.reset();
 
         // factorize
         cs[0] = 0;
